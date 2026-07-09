@@ -39,6 +39,8 @@ Dokumen ini menjadi acuan tipografi untuk tampilan Lumina POS. Gaya utama mengik
 - Pada `980px`, sidebar tetap kanan sekitar `292px`; pada `820px`, sidebar sekitar `272px`.
 - Mobile `<=700px` memakai drawer cart dari kanan dan bottom navigation `Produk / Cart`.
 - Mobile memakai 2 kolom sampai lebar `360px`; di bawah itu turun ke 1 kolom.
+- Hamburger topbar dipakai untuk menu operasional kasir, termasuk akses `Riwayat Hari Ini`.
+- Riwayat harian kasir cukup berupa panel cepat: transaksi, omzet, rata-rata, order terbuka, dan transaksi terbaru.
 
 ## Contoh Hierarki Panel Kanan
 

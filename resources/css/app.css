@@ -357,8 +357,178 @@ body {
 
 .lumina-cart-drawer-title,
 .lumina-cart-overlay,
+.lumina-menu-overlay,
+.lumina-history-overlay,
+.lumina-menu-panel,
+.lumina-history-panel,
 .lumina-mobile-nav {
     display: none;
+}
+
+.lumina-menu-overlay,
+.lumina-history-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    border: 0;
+    background: rgb(15 23 42 / 34%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+}
+
+.is-menu-open .lumina-menu-overlay,
+.is-history-open .lumina-history-overlay {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.lumina-menu-panel,
+.lumina-history-panel {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    z-index: 75;
+    background: var(--lumina-surface);
+    box-shadow: 0 18px 40px rgb(15 23 42 / 18%);
+    flex-direction: column;
+}
+
+.lumina-menu-panel {
+    left: 0;
+    width: min(300px, 86vw);
+    border-right: 1px solid var(--lumina-border);
+    transform: translateX(-104%);
+    transition: transform 220ms ease;
+}
+
+.lumina-history-panel {
+    right: 0;
+    width: min(380px, 90vw);
+    border-left: 1px solid var(--lumina-border);
+    transform: translateX(104%);
+    transition: transform 220ms ease;
+}
+
+.is-menu-open .lumina-menu-panel,
+.is-history-open .lumina-history-panel {
+    display: flex;
+    transform: translateX(0);
+}
+
+.lumina-menu-header,
+.lumina-history-header {
+    min-height: 60px;
+    padding: 14px;
+    border-bottom: 1px solid var(--lumina-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.lumina-menu-header strong,
+.lumina-history-header strong {
+    display: block;
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.lumina-menu-header span,
+.lumina-history-header span {
+    color: var(--lumina-muted);
+    font-size: 12px;
+}
+
+.lumina-menu-list {
+    padding: 10px;
+    display: grid;
+    gap: 6px;
+}
+
+.lumina-menu-list button {
+    min-height: 42px;
+    border: 0;
+    border-radius: var(--lumina-radius);
+    padding: 0 10px;
+    background: transparent;
+    color: #273244;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.lumina-menu-list button:hover,
+.lumina-menu-list button.is-active {
+    color: var(--lumina-primary);
+    background: #e8efff;
+}
+
+.lumina-menu-list .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.lumina-history-stats {
+    padding: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.lumina-history-stats div {
+    min-height: 70px;
+    border: 1px solid var(--lumina-border);
+    border-radius: var(--lumina-radius);
+    padding: 10px;
+    background: var(--lumina-surface-low);
+}
+
+.lumina-history-stats span {
+    display: block;
+    color: var(--lumina-muted);
+    font-size: 11px;
+}
+
+.lumina-history-stats strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 15px;
+    line-height: 1.25;
+}
+
+.lumina-history-list {
+    padding: 0 14px 14px;
+    overflow-y: auto;
+}
+
+.lumina-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--lumina-border);
+}
+
+.lumina-history-item strong {
+    display: block;
+    font-size: 13px;
+}
+
+.lumina-history-item span {
+    display: block;
+    color: var(--lumina-muted);
+    font-size: 11px;
+}
+
+.lumina-history-item > div:last-child {
+    text-align: right;
 }
 
 .lumina-sidebar-header {

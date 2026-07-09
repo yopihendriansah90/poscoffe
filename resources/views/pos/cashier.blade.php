@@ -89,6 +89,20 @@
         ['id' => 'cheesy-cheesecake', 'qty' => 2, 'name' => 'Sliced Black Forest', 'price' => 50000, 'category' => 'Cake', 'slug' => 'cake', 'image' => asset('images/products/sliced-black-forest.webp')],
         ['id' => 'cheezy-sourdough', 'qty' => 1, 'name' => 'Solo Floss Bread', 'price' => 45000, 'category' => 'Bread', 'slug' => 'bread', 'image' => asset('images/products/solo-floss-bread.webp')],
     ];
+
+    $todaySummary = [
+        'transactions' => 24,
+        'revenue' => 2450000,
+        'average' => 102000,
+        'openOrders' => 3,
+        'items' => [
+            ['code' => 'TRX-1024', 'time' => '13:42', 'cashier' => 'Yopi', 'method' => 'QRIS', 'total' => 185000],
+            ['code' => 'TRX-1023', 'time' => '13:18', 'cashier' => 'Yopi', 'method' => 'Tunai', 'total' => 94000],
+            ['code' => 'TRX-1022', 'time' => '12:54', 'cashier' => 'Yopi', 'method' => 'Kartu', 'total' => 132000],
+            ['code' => 'TRX-1021', 'time' => '12:27', 'cashier' => 'Yopi', 'method' => 'QRIS', 'total' => 76000],
+            ['code' => 'TRX-1020', 'time' => '11:59', 'cashier' => 'Yopi', 'method' => 'QRIS', 'total' => 211000],
+        ],
+    ];
 @endphp
 
 <!DOCTYPE html>
@@ -115,7 +129,7 @@
             <section class="lumina-main" aria-label="Terminal kasir">
                 <header class="lumina-topbar">
                     <div class="lumina-brand">
-                        <button class="lumina-icon-button" type="button" aria-label="Buka menu">
+                        <button class="lumina-icon-button" type="button" aria-label="Buka menu" data-menu-open>
                             <span class="material-symbols-outlined">menu</span>
                         </button>
                         <div class="lumina-logo">Lumina POS</div>
@@ -127,7 +141,7 @@
                             <span>Rab, 29 Mei 2024</span>
                             <span class="divider" aria-hidden="true"></span>
                             <span class="material-symbols-outlined">schedule</span>
-                            <span>07:59 AM</span>
+                            <span>07:59 WIB</span>
                         </div>
 
                         <div class="lumina-status-pill">
@@ -195,6 +209,80 @@
             </section>
 
             <button class="lumina-cart-overlay" type="button" data-cart-close aria-label="Tutup keranjang"></button>
+            <button class="lumina-menu-overlay" type="button" data-menu-close aria-label="Tutup menu kasir"></button>
+            <button class="lumina-history-overlay" type="button" data-history-close aria-label="Tutup riwayat hari ini"></button>
+
+            <aside class="lumina-menu-panel" aria-label="Menu operasional kasir">
+                <div class="lumina-menu-header">
+                    <div>
+                        <strong>Menu Kasir</strong>
+                        <span>Shift Pagi - Yopi</span>
+                    </div>
+                    <button class="lumina-icon-button" type="button" data-menu-close aria-label="Tutup menu">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="lumina-menu-list">
+                    <button class="is-active" type="button" data-menu-close>
+                        <span class="material-symbols-outlined">point_of_sale</span>
+                        <span>Kasir</span>
+                    </button>
+                    <button type="button" data-history-open>
+                        <span class="material-symbols-outlined">receipt_long</span>
+                        <span>Riwayat Hari Ini</span>
+                    </button>
+                    <button type="button">
+                        <span class="material-symbols-outlined">schedule</span>
+                        <span>Shift</span>
+                    </button>
+                </div>
+            </aside>
+
+            <aside class="lumina-history-panel" aria-label="Riwayat transaksi hari ini">
+                <div class="lumina-history-header">
+                    <div>
+                        <strong>Riwayat Hari Ini</strong>
+                        <span>Rab, 29 Mei 2024</span>
+                    </div>
+                    <button class="lumina-icon-button" type="button" data-history-close aria-label="Tutup riwayat">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div class="lumina-history-stats">
+                    <div>
+                        <span>Transaksi</span>
+                        <strong>{{ $todaySummary['transactions'] }}</strong>
+                    </div>
+                    <div>
+                        <span>Omzet</span>
+                        <strong>Rp {{ number_format($todaySummary['revenue'], 0, ',', '.') }}</strong>
+                    </div>
+                    <div>
+                        <span>Rata-rata</span>
+                        <strong>Rp {{ number_format($todaySummary['average'], 0, ',', '.') }}</strong>
+                    </div>
+                    <div>
+                        <span>Order Terbuka</span>
+                        <strong>{{ $todaySummary['openOrders'] }}</strong>
+                    </div>
+                </div>
+
+                <div class="lumina-history-list">
+                    @foreach ($todaySummary['items'] as $transaction)
+                        <article class="lumina-history-item">
+                            <div>
+                                <strong>{{ $transaction['code'] }}</strong>
+                                <span>{{ $transaction['time'] }} WIB - {{ $transaction['cashier'] }}</span>
+                            </div>
+                            <div>
+                                <span>{{ $transaction['method'] }}</span>
+                                <strong>Rp {{ number_format($transaction['total'], 0, ',', '.') }}</strong>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </aside>
 
             <aside class="lumina-sidebar" aria-label="Ringkasan pesanan">
                 <div class="lumina-cart-drawer-title">

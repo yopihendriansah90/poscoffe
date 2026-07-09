@@ -26,12 +26,19 @@ const setupLuminaPos = () => {
     const productTabButton = root.querySelector('[data-product-tab]');
     const sidebar = root.querySelector('.lumina-sidebar');
     const mobileNav = root.querySelector('.lumina-mobile-nav');
+    const menuPanel = root.querySelector('.lumina-menu-panel');
+    const historyPanel = root.querySelector('.lumina-history-panel');
+    const menuOpenButtons = [...root.querySelectorAll('[data-menu-open]')];
+    const menuCloseButtons = [...root.querySelectorAll('[data-menu-close]')];
+    const historyOpenButtons = [...root.querySelectorAll('[data-history-open]')];
+    const historyCloseButtons = [...root.querySelectorAll('[data-history-close]')];
     const cartBadge = root.querySelector('[data-cart-badge]');
     const mobileCartCount = root.querySelector('[data-mobile-cart-count]');
     const taxRate = Number(root.dataset.taxRate || 0.1);
     const discount = Number(root.dataset.discount || 0);
     let activeCategory = 'all';
     let cart = [];
+    let suppressProductClick = false;
 
     const productMap = new Map(
         JSON.parse(root.dataset.products || '[]').map((product) => [product.id, product]),
@@ -133,6 +140,14 @@ const setupLuminaPos = () => {
         cartOpenButtons.forEach((button) => button.classList.toggle('is-active', isOpen));
     };
 
+    const setMenuOpen = (isOpen) => {
+        root.classList.toggle('is-menu-open', isOpen);
+    };
+
+    const setHistoryOpen = (isOpen) => {
+        root.classList.toggle('is-history-open', isOpen);
+    };
+
     const renderCart = () => {
         if (!cart.length) {
             cartList.innerHTML = `
@@ -208,8 +223,18 @@ const setupLuminaPos = () => {
         });
     };
 
+    const hasOpenPanel = () => root.classList.contains('is-cart-open')
+        || root.classList.contains('is-menu-open')
+        || root.classList.contains('is-history-open');
+
     productCards.forEach((card) => {
-        const addFromCard = () => {
+        const addFromCard = (event) => {
+            if (hasOpenPanel() || suppressProductClick) {
+                event?.preventDefault();
+                event?.stopPropagation();
+                return;
+            }
+
             animateProductToCart(card);
             addProduct(productFromCard(card));
         };
@@ -218,7 +243,7 @@ const setupLuminaPos = () => {
         card.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                addFromCard();
+                addFromCard(event);
             }
         });
     });
@@ -243,23 +268,80 @@ const setupLuminaPos = () => {
 
     productTabButton?.addEventListener('click', () => setCartOpen(false));
 
+    menuOpenButtons.forEach((button) => {
+        button.addEventListener('click', () => setMenuOpen(true));
+    });
+
+    menuCloseButtons.forEach((button) => {
+        button.addEventListener('click', () => setMenuOpen(false));
+    });
+
+    historyOpenButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setMenuOpen(false);
+            setHistoryOpen(true);
+        });
+    });
+
+    historyCloseButtons.forEach((button) => {
+        button.addEventListener('click', () => setHistoryOpen(false));
+    });
+
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             setCartOpen(false);
+            setMenuOpen(false);
+            setHistoryOpen(false);
         }
     });
 
     document.addEventListener('pointerdown', (event) => {
-        if (!root.classList.contains('is-cart-open')) {
+        let closedPanel = false;
+
+        if (
+            event.target.closest('[data-cart-open]')
+            || event.target.closest('[data-menu-open]')
+            || event.target.closest('[data-history-open]')
+        ) {
             return;
         }
 
-        if (sidebar?.contains(event.target) || mobileNav?.contains(event.target)) {
-            return;
+        if (root.classList.contains('is-cart-open')) {
+            if (sidebar?.contains(event.target) || mobileNav?.contains(event.target)) {
+                return;
+            }
+
+            setCartOpen(false);
+            closedPanel = true;
         }
 
-        setCartOpen(false);
-    });
+        if (root.classList.contains('is-menu-open')) {
+            if (menuPanel?.contains(event.target)) {
+                return;
+            }
+
+            setMenuOpen(false);
+            closedPanel = true;
+        }
+
+        if (root.classList.contains('is-history-open')) {
+            if (historyPanel?.contains(event.target)) {
+                return;
+            }
+
+            setHistoryOpen(false);
+            closedPanel = true;
+        }
+
+        if (closedPanel) {
+            suppressProductClick = true;
+            window.setTimeout(() => {
+                suppressProductClick = false;
+            }, 180);
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
 
     cartList.addEventListener('click', (event) => {
         const increase = event.target.closest('[data-cart-increase]');
