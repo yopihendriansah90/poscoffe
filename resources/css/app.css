@@ -593,6 +593,16 @@ body {
     display: none;
 }
 
+.lumina-fly-to-cart {
+    position: fixed;
+    z-index: 90;
+    border-radius: var(--lumina-radius);
+    box-shadow: 0 14px 28px rgb(15 23 42 / 22%);
+    object-fit: cover;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
 @media (min-width: 1500px) {
     :root {
         --lumina-sidebar: 340px;

@@ -38,6 +38,7 @@ const setupLuminaPos = () => {
     );
 
     const initialCart = JSON.parse(root.dataset.initialCart || '[]');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const productFromCard = (card) => ({
         id: card.dataset.id,
@@ -60,6 +61,62 @@ const setupLuminaPos = () => {
         }
 
         renderCart();
+    };
+
+    const getFlyTargetRect = () => {
+        const isMobile = window.matchMedia('(max-width: 700px)').matches;
+        const target = isMobile && !root.classList.contains('is-cart-open')
+            ? cartOpenButtons[0]
+            : cartList;
+
+        return target?.getBoundingClientRect();
+    };
+
+    const animateProductToCart = (card) => {
+        if (prefersReducedMotion || !card?.isConnected) {
+            return;
+        }
+
+        const image = card.querySelector('img');
+        const sourceRect = image?.getBoundingClientRect();
+        const targetRect = getFlyTargetRect();
+
+        if (!image || !sourceRect || !targetRect) {
+            return;
+        }
+
+        const clone = image.cloneNode();
+        clone.className = 'lumina-fly-to-cart';
+        clone.setAttribute('aria-hidden', 'true');
+        clone.style.left = `${sourceRect.left}px`;
+        clone.style.top = `${sourceRect.top}px`;
+        clone.style.width = `${sourceRect.width}px`;
+        clone.style.height = `${sourceRect.height}px`;
+        document.body.appendChild(clone);
+
+        const targetX = targetRect.left + targetRect.width / 2 - (sourceRect.left + sourceRect.width / 2);
+        const targetY = targetRect.top + targetRect.height / 2 - (sourceRect.top + sourceRect.height / 2);
+
+        clone.animate(
+            [
+                {
+                    opacity: 0.96,
+                    transform: 'translate3d(0, 0, 0) scale(1)',
+                },
+                {
+                    opacity: 0.82,
+                    transform: `translate3d(${targetX * 0.62}px, ${targetY * 0.34 - 28}px, 0) scale(0.62)`,
+                },
+                {
+                    opacity: 0,
+                    transform: `translate3d(${targetX}px, ${targetY}px, 0) scale(0.2)`,
+                },
+            ],
+            {
+                duration: 560,
+                easing: 'cubic-bezier(.2,.8,.2,1)',
+            },
+        ).finished.finally(() => clone.remove());
     };
 
     const changeQty = (id, delta) => {
@@ -152,7 +209,10 @@ const setupLuminaPos = () => {
     };
 
     productCards.forEach((card) => {
-        const addFromCard = () => addProduct(productFromCard(card));
+        const addFromCard = () => {
+            animateProductToCart(card);
+            addProduct(productFromCard(card));
+        };
 
         card.addEventListener('click', addFromCard);
         card.addEventListener('keydown', (event) => {
