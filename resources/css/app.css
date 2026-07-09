@@ -572,12 +572,35 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     font-size: 14px;
     font-weight: 600;
 }
 
+.lumina-table-select select {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    appearance: none;
+    background: transparent;
+    color: var(--lumina-text);
+    font: inherit;
+    outline: none;
+}
+
 .lumina-table-select .material-symbols-outlined {
     font-size: 18px;
+}
+
+.lumina-table-select.is-take-away {
+    color: var(--lumina-primary);
+    background: #e8efff;
+    border-color: rgb(15 85 217 / 28%);
+}
+
+.lumina-table-select.is-take-away select {
+    color: var(--lumina-primary);
+    opacity: 1;
 }
 
 .lumina-cart {

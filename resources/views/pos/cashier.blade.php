@@ -297,13 +297,17 @@
 
                 <div class="lumina-sidebar-header">
                     <div class="lumina-segment" role="group" aria-label="Jenis pesanan">
-                        <button class="is-active" type="button">Dine In</button>
-                        <button type="button">Take Away</button>
+                        <button class="is-active" type="button" data-order-type="dine-in">Dine In</button>
+                        <button type="button" data-order-type="take-away">Take Away</button>
                     </div>
-                    <div class="lumina-table-select">
-                        <span>Meja 05</span>
+                    <label class="lumina-table-select" data-table-field>
+                        <select data-table-select aria-label="Pilih meja">
+                            @for ($table = 1; $table <= 5; $table++)
+                                <option value="{{ $table }}" @selected($table === 5)>Meja {{ str_pad((string) $table, 2, '0', STR_PAD_LEFT) }}</option>
+                            @endfor
+                        </select>
                         <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-                    </div>
+                    </label>
                 </div>
 
                 <div class="lumina-cart" data-cart-list></div>

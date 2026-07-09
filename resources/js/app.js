@@ -32,11 +32,15 @@ const setupLuminaPos = () => {
     const menuCloseButtons = [...root.querySelectorAll('[data-menu-close]')];
     const historyOpenButtons = [...root.querySelectorAll('[data-history-open]')];
     const historyCloseButtons = [...root.querySelectorAll('[data-history-close]')];
+    const orderTypeButtons = [...root.querySelectorAll('[data-order-type]')];
+    const tableField = root.querySelector('[data-table-field]');
+    const tableSelect = root.querySelector('[data-table-select]');
     const cartBadge = root.querySelector('[data-cart-badge]');
     const mobileCartCount = root.querySelector('[data-mobile-cart-count]');
     const taxRate = Number(root.dataset.taxRate || 0.1);
     const discount = Number(root.dataset.discount || 0);
     let activeCategory = 'all';
+    let orderType = 'dine-in';
     let cart = [];
     let suppressProductClick = false;
 
@@ -146,6 +150,25 @@ const setupLuminaPos = () => {
 
     const setHistoryOpen = (isOpen) => {
         root.classList.toggle('is-history-open', isOpen);
+    };
+
+    const setOrderType = (type) => {
+        orderType = type;
+        const isTakeAway = orderType === 'take-away';
+
+        orderTypeButtons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.orderType === orderType);
+        });
+
+        tableField?.classList.toggle('is-take-away', isTakeAway);
+
+        if (tableSelect) {
+            tableSelect.disabled = isTakeAway;
+            tableSelect.setAttribute('aria-disabled', String(isTakeAway));
+            tableSelect.options[tableSelect.selectedIndex].textContent = isTakeAway
+                ? 'Take Away'
+                : `Meja ${String(tableSelect.value).padStart(2, '0')}`;
+        }
     };
 
     const renderCart = () => {
@@ -287,6 +310,16 @@ const setupLuminaPos = () => {
         button.addEventListener('click', () => setHistoryOpen(false));
     });
 
+    orderTypeButtons.forEach((button) => {
+        button.addEventListener('click', () => setOrderType(button.dataset.orderType));
+    });
+
+    tableSelect?.addEventListener('change', () => {
+        if (orderType === 'dine-in') {
+            tableSelect.options[tableSelect.selectedIndex].textContent = `Meja ${String(tableSelect.value).padStart(2, '0')}`;
+        }
+    });
+
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             setCartOpen(false);
@@ -367,6 +400,8 @@ const setupLuminaPos = () => {
     if (!initialCart.length) {
         renderCart();
     }
+
+    setOrderType(orderType);
 };
 
 document.addEventListener('DOMContentLoaded', setupLuminaPos);

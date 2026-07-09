@@ -41,6 +41,7 @@ Dokumen ini menjadi acuan tipografi untuk tampilan Lumina POS. Gaya utama mengik
 - Mobile memakai 2 kolom sampai lebar `360px`; di bawah itu turun ke 1 kolom.
 - Hamburger topbar dipakai untuk menu operasional kasir, termasuk akses `Riwayat Hari Ini`.
 - Riwayat harian kasir cukup berupa panel cepat: transaksi, omzet, rata-rata, order terbuka, dan transaksi terbaru.
+- Segment `Dine In / Take Away` berada di panel cart; Dine In mengaktifkan pilihan `Meja 01-05`, Take Away menonaktifkan meja dan menampilkan status order.
 
 ## Contoh Hierarki Panel Kanan
 
