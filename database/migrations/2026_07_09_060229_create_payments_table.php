@@ -13,6 +13,13 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+            $table->string('method');
+            $table->string('status')->default('paid');
+            $table->unsignedInteger('amount_paid');
+            $table->unsignedInteger('change_amount')->default(0);
+            $table->string('reference')->nullable();
+            $table->timestamp('paid_at')->nullable();
             $table->timestamps();
         });
     }

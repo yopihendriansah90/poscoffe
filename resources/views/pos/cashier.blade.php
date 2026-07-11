@@ -1,117 +1,4 @@
 @php
-    $categories = [
-        ['name' => 'Semua Menu', 'count' => 110, 'icon' => 'restaurant_menu', 'slug' => 'all'],
-        ['name' => 'All Discount', 'count' => 3, 'icon' => 'local_offer', 'slug' => 'discount'],
-        ['name' => 'Food', 'count' => 5, 'icon' => 'restaurant', 'slug' => 'food'],
-        ['name' => 'Drink', 'count' => 2, 'icon' => 'local_cafe', 'slug' => 'drink'],
-        ['name' => 'Roti', 'count' => 20, 'icon' => 'bakery_dining', 'slug' => 'bread'],
-        ['name' => 'Kue', 'count' => 20, 'icon' => 'cake', 'slug' => 'cake'],
-        ['name' => 'Donat', 'count' => 20, 'icon' => 'donut_small', 'slug' => 'donut'],
-        ['name' => 'Pastry', 'count' => 20, 'icon' => 'breakfast_dining', 'slug' => 'pastry'],
-        ['name' => 'Sandwich', 'count' => 20, 'icon' => 'lunch_dining', 'slug' => 'sandwich'],
-    ];
-
-    $products = [
-        [
-            'id' => 'beef-crowich',
-            'name' => 'Beef Crowich',
-            'category' => 'Sandwich',
-            'slug' => 'sandwich',
-            'type' => 'food',
-            'discount' => true,
-            'price' => 55000,
-            'image' => asset('images/products/beef-crowich.webp'),
-        ],
-        [
-            'id' => 'buttermelt-croissant',
-            'name' => 'Buttermelt Croissant',
-            'category' => 'Pastry',
-            'slug' => 'pastry',
-            'type' => 'food',
-            'discount' => false,
-            'price' => 40000,
-            'image' => asset('images/products/buttermelt-croissant.webp'),
-        ],
-        [
-            'id' => 'cereal-cream-donut',
-            'name' => 'Cereal Cream Donut',
-            'category' => 'Donut',
-            'slug' => 'donut',
-            'type' => 'food',
-            'discount' => true,
-            'price' => 24500,
-            'image' => asset('images/products/cereal-cream-donut.webp'),
-        ],
-        [
-            'id' => 'cheesy-cheesecake',
-            'name' => 'Cheesy Cheesecake',
-            'category' => 'Cake',
-            'slug' => 'cake',
-            'type' => 'food',
-            'discount' => false,
-            'price' => 37500,
-            'image' => asset('images/products/cheesy-cheesecake.webp'),
-        ],
-        [
-            'id' => 'cheezy-sourdough',
-            'name' => 'Cheezy Sourdough',
-            'category' => 'Bread',
-            'slug' => 'bread',
-            'type' => 'food',
-            'discount' => false,
-            'price' => 45000,
-            'image' => asset('images/products/cheezy-sourdough.webp'),
-        ],
-        [
-            'id' => 'iced-latte',
-            'name' => 'Iced Latte',
-            'category' => 'Drink',
-            'slug' => 'drink',
-            'type' => 'drink',
-            'discount' => true,
-            'price' => 32000,
-            'image' => asset('images/products/iced-latte.webp'),
-        ],
-        [
-            'id' => 'lemon-tea',
-            'name' => 'Lemon Tea',
-            'category' => 'Drink',
-            'slug' => 'drink',
-            'type' => 'drink',
-            'discount' => false,
-            'price' => 22000,
-            'image' => asset('images/products/lemon-tea.webp'),
-        ],
-    ];
-
-    $initialCart = [
-        ['id' => 'beef-crowich', 'qty' => 1],
-        ['id' => 'cheesy-cheesecake', 'qty' => 2, 'name' => 'Sliced Black Forest', 'price' => 50000, 'category' => 'Cake', 'slug' => 'cake', 'image' => asset('images/products/sliced-black-forest.webp')],
-        ['id' => 'cheezy-sourdough', 'qty' => 1, 'name' => 'Solo Floss Bread', 'price' => 45000, 'category' => 'Bread', 'slug' => 'bread', 'image' => asset('images/products/solo-floss-bread.webp')],
-    ];
-
-    $todaySummary = [
-        'transactions' => 24,
-        'revenue' => 2450000,
-        'average' => 102000,
-        'openOrders' => 3,
-        'items' => [
-            ['code' => 'TRX-1024', 'time' => '13:42', 'cashier' => 'Yopi', 'method' => 'QRIS', 'total' => 185000],
-            ['code' => 'TRX-1023', 'time' => '13:18', 'cashier' => 'Yopi', 'method' => 'Tunai', 'total' => 94000],
-            ['code' => 'TRX-1022', 'time' => '12:54', 'cashier' => 'Yopi', 'method' => 'Kartu', 'total' => 132000],
-            ['code' => 'TRX-1021', 'time' => '12:27', 'cashier' => 'Yopi', 'method' => 'QRIS', 'total' => 76000],
-            ['code' => 'TRX-1020', 'time' => '11:59', 'cashier' => 'Yopi', 'method' => 'QRIS', 'total' => 211000],
-        ],
-    ];
-
-    $posTimezone = config('app.timezone', 'Asia/Jakarta');
-    $serverNow = now($posTimezone);
-    $timezoneLabels = [
-        'Asia/Jakarta' => 'WIB',
-        'Asia/Makassar' => 'WITA',
-        'Asia/Jayapura' => 'WIT',
-    ];
-    $posTimezoneLabel = $timezoneLabels[$posTimezone] ?? $posTimezone;
     $dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     $monthNames = [1 => 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     $serverDateLabel = $dayNames[(int) $serverNow->format('w')] . ', ' . $serverNow->format('d') . ' ' . $monthNames[(int) $serverNow->format('n')] . ' ' . $serverNow->format('Y');
@@ -122,6 +9,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>Lumina POS - Kasir</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -137,6 +25,7 @@
             data-initial-cart='@json($initialCart)'
             data-discount="10000"
             data-tax-rate="0.1"
+            data-order-store-url="{{ route('kasir.orders.store') }}"
             data-server-now-ms="{{ $serverNow->getTimestamp() * 1000 }}"
             data-server-timezone="{{ $posTimezone }}"
             data-server-timezone-label="{{ $posTimezoneLabel }}"
@@ -292,7 +181,7 @@
                         <article class="lumina-history-item">
                             <div>
                                 <strong>{{ $transaction['code'] }}</strong>
-                                <span>{{ $transaction['time'] }} WIB - {{ $transaction['cashier'] }}</span>
+                                <span>{{ $transaction['time'] }} {{ $posTimezoneLabel }} - {{ $transaction['cashier'] }}</span>
                             </div>
                             <div>
                                 <span>{{ $transaction['method'] }}</span>
@@ -321,16 +210,16 @@
                     </div>
                     <div class="lumina-table-select" data-table-field>
                         <button class="lumina-table-trigger" type="button" data-table-trigger aria-haspopup="listbox" aria-expanded="false">
-                            <span data-table-current>Meja 05</span>
+                            <span data-table-current data-table-value="{{ $selectedTable['id'] }}">{{ $selectedTable['name'] }}</span>
                             <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
                         </button>
                         <div class="lumina-table-options" data-table-options role="listbox" aria-label="Pilih meja">
-                            @for ($table = 1; $table <= 5; $table++)
-                                <button type="button" role="option" data-table-option data-table-value="{{ $table }}" aria-selected="{{ $table === 5 ? 'true' : 'false' }}">
-                                    <span>Meja {{ str_pad((string) $table, 2, '0', STR_PAD_LEFT) }}</span>
+                            @foreach ($tables as $table)
+                                <button type="button" role="option" data-table-option data-table-value="{{ $table['id'] }}" data-table-label="{{ $table['name'] }}" aria-selected="{{ $table['id'] === $selectedTable['id'] ? 'true' : 'false' }}">
+                                    <span>{{ $table['name'] }}</span>
                                     <span class="material-symbols-outlined" aria-hidden="true">check</span>
                                 </button>
-                            @endfor
+                            @endforeach
                         </div>
                     </div>
                 </div>
@@ -418,7 +307,7 @@
                         </div>
                         <div>
                             <span>Meja</span>
-                            <strong data-checkout-table>Meja 05</strong>
+                            <strong data-checkout-table>{{ $selectedTable['name'] }}</strong>
                         </div>
                         <div>
                             <span>Pembayaran</span>
@@ -440,7 +329,7 @@
                         <label for="cash-received">Uang diterima</label>
                         <div class="lumina-cash-input">
                             <span>Rp</span>
-                            <input id="cash-received" type="number" min="0" step="1000" inputmode="numeric" placeholder="0" data-cash-received>
+                            <input id="cash-received" type="text" inputmode="numeric" autocomplete="off" placeholder="0" data-cash-received>
                         </div>
                         <div class="lumina-cash-change">
                             <span>Kembalian</span>

@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->string('phone')->nullable();
+            $table->string('email')->nullable();
+            $table->unsignedInteger('loyalty_points')->default(0);
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

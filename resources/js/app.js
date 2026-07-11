@@ -6,6 +6,10 @@ const formatCurrency = (value) => new Intl.NumberFormat('id-ID', {
     maximumFractionDigits: 0,
 }).format(Number(value));
 
+const formatNumber = (value) => new Intl.NumberFormat('id-ID', {
+    maximumFractionDigits: 0,
+}).format(Number(value || 0));
+
 const escapeHtml = (value) => String(value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -89,13 +93,16 @@ const setupLuminaPos = () => {
     const cartBadge = root.querySelector('[data-cart-badge]');
     const mobileCartCount = root.querySelector('[data-mobile-cart-count]');
     const taxRate = Number(root.dataset.taxRate || 0.1);
+    const orderStoreUrl = root.dataset.orderStoreUrl;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const serverNowMs = Number(root.dataset.serverNowMs || Date.now());
     const serverTimeZone = root.dataset.serverTimezone || 'Asia/Jakarta';
     const serverTimeZoneLabel = root.dataset.serverTimezoneLabel || 'WIB';
     const clientStartMs = Date.now();
     let activeCategory = 'all';
     let orderType = 'dine-in';
-    let selectedTable = '5';
+    let selectedTable = tableCurrent?.dataset.tableValue || tableOptionButtons[0]?.dataset.tableValue || '1';
+    let selectedTableLabel = tableCurrent?.textContent?.trim() || tableOptionButtons[0]?.dataset.tableLabel || 'Meja 01';
     let selectedPromo = 'member';
     let selectedPayment = 'qris';
     let cart = [];
@@ -115,7 +122,6 @@ const setupLuminaPos = () => {
         transactions: Number(historyTransactionsNode?.textContent?.replace(/\D/g, '') || 0),
         revenue: Number(historyRevenueNode?.textContent?.replace(/\D/g, '') || 0),
     };
-    let transactionSequence = 1025;
     let toastSequence = 0;
 
     const productMap = new Map(
@@ -155,6 +161,14 @@ const setupLuminaPos = () => {
 
         if (currentTimeNode) {
             currentTimeNode.textContent = formatServerTime(serverDate);
+        }
+    };
+
+    const setCashReceivedValue = (value) => {
+        cashReceived = Math.max(0, Number(value || 0));
+
+        if (cashReceivedInput) {
+            cashReceivedInput.value = cashReceived > 0 ? formatNumber(cashReceived) : '';
         }
     };
 
@@ -330,12 +344,7 @@ const setupLuminaPos = () => {
 
         if (!isOpen) {
             checkoutCompleted = false;
-            cashReceived = 0;
-
-            if (cashReceivedInput) {
-                cashReceivedInput.value = '';
-            }
-
+            setCashReceivedValue(0);
             updateCheckoutActions();
         }
     };
@@ -400,8 +409,6 @@ const setupLuminaPos = () => {
         }
     };
 
-    const tableLabel = (value) => `Meja ${String(value).padStart(2, '0')}`;
-
     const setTableDropdownOpen = (isOpen) => {
         if (orderType === 'take-away') {
             isOpen = false;
@@ -413,9 +420,12 @@ const setupLuminaPos = () => {
 
     const setSelectedTable = (value) => {
         selectedTable = String(value);
+        selectedTableLabel = tableOptionButtons.find((button) => button.dataset.tableValue === selectedTable)?.dataset.tableLabel
+            || selectedTableLabel;
 
         if (orderType === 'dine-in' && tableCurrent) {
-            tableCurrent.textContent = tableLabel(selectedTable);
+            tableCurrent.textContent = selectedTableLabel;
+            tableCurrent.dataset.tableValue = selectedTable;
         }
 
         tableOptionButtons.forEach((button) => {
@@ -487,11 +497,7 @@ const setupLuminaPos = () => {
         }
 
         if (selectedPayment !== 'cash') {
-            cashReceived = 0;
-
-            if (cashReceivedInput) {
-                cashReceivedInput.value = '';
-            }
+            setCashReceivedValue(0);
         }
 
         showToast({
@@ -556,7 +562,7 @@ const setupLuminaPos = () => {
         }
 
         if (tableCurrent) {
-            tableCurrent.textContent = isTakeAway ? 'Take Away' : tableLabel(selectedTable);
+            tableCurrent.textContent = isTakeAway ? 'Take Away' : selectedTableLabel;
         }
 
         setTableDropdownOpen(false);
@@ -631,7 +637,7 @@ const setupLuminaPos = () => {
         }
 
         if (checkoutTable) {
-            checkoutTable.textContent = orderType === 'take-away' ? '-' : tableLabel(selectedTable);
+            checkoutTable.textContent = orderType === 'take-away' ? '-' : selectedTableLabel;
         }
 
         if (checkoutPayment) {
@@ -689,36 +695,39 @@ const setupLuminaPos = () => {
         historyAverageNode.textContent = formatCurrency(average);
     };
 
-    const addTransactionToHistory = (summary) => {
-        const code = `TRX-${transactionSequence}`;
-        transactionSequence += 1;
-
-        const time = new Intl.DateTimeFormat('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZone: 'Asia/Jakarta',
-        }).format(new Date()).replace('.', ':');
-
+    const addTransactionToHistory = (transaction) => {
         historyList?.insertAdjacentHTML('afterbegin', `
             <article class="lumina-history-item">
                 <div>
-                    <strong>${code}</strong>
-                    <span>${time} ${escapeHtml(serverTimeZoneLabel)} - Yopi</span>
+                    <strong>${escapeHtml(transaction.code)}</strong>
+                    <span>${escapeHtml(transaction.time)} ${escapeHtml(serverTimeZoneLabel)} - ${escapeHtml(transaction.cashier)}</span>
                 </div>
                 <div>
-                    <span>${escapeHtml(getActivePaymentName())}</span>
-                    <strong>${formatCurrency(summary.total)}</strong>
+                    <span>${escapeHtml(transaction.method)}</span>
+                    <strong>${formatCurrency(transaction.total)}</strong>
                 </div>
             </article>
         `);
 
-        updateHistoryStats(summary.total);
-
-        return code;
+        updateHistoryStats(transaction.total);
     };
 
-    const completeCheckout = () => {
+    const createOrderPayload = () => ({
+        order_type: orderType === 'take-away' ? 'take_away' : 'dine_in',
+        dining_table_id: orderType === 'take-away' ? null : selectedTable,
+        promo: selectedPromo,
+        payment: {
+            method: selectedPayment,
+            cash_received: selectedPayment === 'cash' ? cashReceived : null,
+        },
+        items: cart.map((item) => ({
+            id: item.id,
+            qty: item.qty,
+            note: item.note || null,
+        })),
+    });
+
+    const completeCheckout = async () => {
         if (!cart.length) {
             return;
         }
@@ -736,26 +745,49 @@ const setupLuminaPos = () => {
             return;
         }
 
-        lastTransactionCode = addTransactionToHistory(completedSummary);
-        cart = [];
-        renderCart();
-        setCartOpen(false);
-        checkoutCompleted = true;
+        updateCheckoutActions();
 
-        if (checkoutSuccess) {
-            checkoutSuccess.hidden = false;
+        try {
+            checkoutPrimaryButton.disabled = true;
+            checkoutPrimaryButton.textContent = 'Menyimpan...';
+
+            const response = await window.axios.post(orderStoreUrl, createOrderPayload(), {
+                headers: csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {},
+            });
+
+            lastTransactionCode = response.data.order.code;
+            addTransactionToHistory(response.data.order);
+            cart = [];
+            renderCart();
+            setCartOpen(false);
+            checkoutCompleted = true;
+
+            if (checkoutSuccess) {
+                checkoutSuccess.hidden = false;
+            }
+
+            if (checkoutSuccessCode) {
+                checkoutSuccessCode.textContent = lastTransactionCode;
+            }
+
+            showToast({
+                type: 'success',
+                title: 'Pesanan berhasil dibuat',
+                message: `${lastTransactionCode} masuk ke Riwayat Hari Ini.`,
+                duration: 3200,
+            });
+        } catch (error) {
+            const message = error.response?.data?.message
+                || Object.values(error.response?.data?.errors || {})?.[0]?.[0]
+                || 'Transaksi belum bisa disimpan.';
+
+            showToast({
+                type: 'danger',
+                title: 'Gagal membuat pesanan',
+                message,
+                duration: 3600,
+            });
         }
-
-        if (checkoutSuccessCode) {
-            checkoutSuccessCode.textContent = lastTransactionCode;
-        }
-
-        showToast({
-            type: 'success',
-            title: 'Pesanan berhasil dibuat',
-            message: `${lastTransactionCode} masuk ke Riwayat Hari Ini.`,
-            duration: 3200,
-        });
 
         updateCheckoutActions();
     };
@@ -900,7 +932,7 @@ const setupLuminaPos = () => {
     noteSaveButton?.addEventListener('click', () => saveItemNote(noteInput?.value || ''));
 
     cashReceivedInput?.addEventListener('input', () => {
-        cashReceived = Number(cashReceivedInput.value || 0);
+        setCashReceivedValue(cashReceivedInput.value.replace(/\D/g, ''));
         renderCheckoutPreview();
     });
 
