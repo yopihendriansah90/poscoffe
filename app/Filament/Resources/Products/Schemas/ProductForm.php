@@ -107,7 +107,7 @@ class ProductForm
                                     ->directory('product-images')
                                     ->visibility('public')
                                     ->imageEditor()
-                                    ->helperText('Upload gambar baru, atau biarkan gambar seed tetap memakai path public yang lama.'),
+                                    ->helperText('Ukuran ideal 800 x 600 px dengan rasio 4:3. Gunakan JPG/PNG/WebP yang jelas dan tidak terlalu gelap.'),
                                 Select::make('stock_status')
                                     ->label('Status stok')
                                     ->options([
