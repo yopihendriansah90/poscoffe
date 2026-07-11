@@ -6,6 +6,13 @@ const formatCurrency = (value) => new Intl.NumberFormat('id-ID', {
     maximumFractionDigits: 0,
 }).format(Number(value));
 
+const escapeHtml = (value) => String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+
 const setupLuminaPos = () => {
     const root = document.querySelector('[data-pos-root]');
 
@@ -21,6 +28,10 @@ const setupLuminaPos = () => {
     const taxNode = root.querySelector('[data-tax]');
     const discountNode = root.querySelector('[data-discount-label]');
     const totalNode = root.querySelector('[data-total]');
+    const currentDateNode = root.querySelector('[data-current-date]');
+    const currentTimeNode = root.querySelector('[data-current-time]');
+    const historyDateNode = root.querySelector('[data-history-date]');
+    const toastStack = root.querySelector('[data-toast-stack]');
     const cartOpenButtons = [...root.querySelectorAll('[data-cart-open]')];
     const cartCloseButtons = [...root.querySelectorAll('[data-cart-close]')];
     const productTabButton = root.querySelector('[data-product-tab]');
@@ -28,21 +39,84 @@ const setupLuminaPos = () => {
     const mobileNav = root.querySelector('.lumina-mobile-nav');
     const menuPanel = root.querySelector('.lumina-menu-panel');
     const historyPanel = root.querySelector('.lumina-history-panel');
+    const checkoutModal = root.querySelector('.lumina-checkout-modal');
     const menuOpenButtons = [...root.querySelectorAll('[data-menu-open]')];
     const menuCloseButtons = [...root.querySelectorAll('[data-menu-close]')];
     const historyOpenButtons = [...root.querySelectorAll('[data-history-open]')];
     const historyCloseButtons = [...root.querySelectorAll('[data-history-close]')];
+    const checkoutOpenButton = root.querySelector('[data-checkout-open]');
+    const checkoutCloseButtons = [...root.querySelectorAll('[data-checkout-close]')];
+    const checkoutSecondaryButton = root.querySelector('[data-checkout-secondary]');
+    const checkoutPrimaryButton = root.querySelector('[data-checkout-primary]');
+    const checkoutSuccess = root.querySelector('[data-checkout-success]');
+    const checkoutSuccessCode = root.querySelector('[data-checkout-success-code]');
+    const checkoutItems = root.querySelector('[data-checkout-items]');
+    const checkoutOrderType = root.querySelector('[data-checkout-order-type]');
+    const checkoutTable = root.querySelector('[data-checkout-table]');
+    const checkoutPayment = root.querySelector('[data-checkout-payment]');
+    const checkoutPromo = root.querySelector('[data-checkout-promo]');
+    const checkoutSubtotal = root.querySelector('[data-checkout-subtotal]');
+    const checkoutTax = root.querySelector('[data-checkout-tax]');
+    const checkoutDiscount = root.querySelector('[data-checkout-discount]');
+    const checkoutTotal = root.querySelector('[data-checkout-total]');
+    const cashPanel = root.querySelector('[data-cash-panel]');
+    const cashReceivedInput = root.querySelector('[data-cash-received]');
+    const cashChangeNode = root.querySelector('[data-cash-change]');
+    const noteModal = root.querySelector('.lumina-note-modal');
+    const noteCloseButtons = [...root.querySelectorAll('[data-note-close]')];
+    const noteItemName = root.querySelector('[data-note-item-name]');
+    const noteInput = root.querySelector('[data-note-input]');
+    const noteSuggestionButtons = [...root.querySelectorAll('[data-note-suggestion]')];
+    const noteClearButton = root.querySelector('[data-note-clear]');
+    const noteSaveButton = root.querySelector('[data-note-save]');
+    const historyTransactionsNode = root.querySelector('[data-history-transactions]');
+    const historyRevenueNode = root.querySelector('[data-history-revenue]');
+    const historyAverageNode = root.querySelector('[data-history-average]');
+    const historyList = root.querySelector('[data-history-list]');
     const orderTypeButtons = [...root.querySelectorAll('[data-order-type]')];
     const tableField = root.querySelector('[data-table-field]');
-    const tableSelect = root.querySelector('[data-table-select]');
+    const tableTrigger = root.querySelector('[data-table-trigger]');
+    const tableCurrent = root.querySelector('[data-table-current]');
+    const tableOptionButtons = [...root.querySelectorAll('[data-table-option]')];
+    const promoPicker = root.querySelector('[data-promo-picker]');
+    const promoTrigger = root.querySelector('[data-promo-trigger]');
+    const promoLabel = root.querySelector('[data-promo-label]');
+    const promoOptionButtons = [...root.querySelectorAll('[data-promo-option]')];
+    const paymentPicker = root.querySelector('[data-payment-picker]');
+    const paymentTrigger = root.querySelector('[data-payment-trigger]');
+    const paymentLabel = root.querySelector('[data-payment-label]');
+    const paymentOptionButtons = [...root.querySelectorAll('[data-payment-option]')];
     const cartBadge = root.querySelector('[data-cart-badge]');
     const mobileCartCount = root.querySelector('[data-mobile-cart-count]');
     const taxRate = Number(root.dataset.taxRate || 0.1);
-    const discount = Number(root.dataset.discount || 0);
+    const serverNowMs = Number(root.dataset.serverNowMs || Date.now());
+    const serverTimeZone = root.dataset.serverTimezone || 'Asia/Jakarta';
+    const serverTimeZoneLabel = root.dataset.serverTimezoneLabel || 'WIB';
+    const clientStartMs = Date.now();
     let activeCategory = 'all';
     let orderType = 'dine-in';
+    let selectedTable = '5';
+    let selectedPromo = 'member';
+    let selectedPayment = 'qris';
     let cart = [];
     let suppressProductClick = false;
+    let checkoutCompleted = false;
+    let lastTransactionCode = '';
+    let activeNoteItemId = null;
+    let cashReceived = 0;
+    let lastSummary = {
+        subtotal: 0,
+        tax: 0,
+        discount: 0,
+        total: 0,
+        itemCount: 0,
+    };
+    let historyStats = {
+        transactions: Number(historyTransactionsNode?.textContent?.replace(/\D/g, '') || 0),
+        revenue: Number(historyRevenueNode?.textContent?.replace(/\D/g, '') || 0),
+    };
+    let transactionSequence = 1025;
+    let toastSequence = 0;
 
     const productMap = new Map(
         JSON.parse(root.dataset.products || '[]').map((product) => [product.id, product]),
@@ -50,6 +124,84 @@ const setupLuminaPos = () => {
 
     const initialCart = JSON.parse(root.dataset.initialCart || '[]');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const formatServerDate = (date) => new Intl.DateTimeFormat('id-ID', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: serverTimeZone,
+    }).format(date).replace(/\./g, '');
+
+    const formatServerTime = (date) => `${new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: serverTimeZone,
+    }).format(date).replace(/\./g, ':')} ${serverTimeZoneLabel}`;
+
+    const updateServerClock = () => {
+        const serverDate = new Date(serverNowMs + (Date.now() - clientStartMs));
+        const dateLabel = formatServerDate(serverDate);
+
+        if (currentDateNode) {
+            currentDateNode.textContent = dateLabel;
+        }
+
+        if (historyDateNode) {
+            historyDateNode.textContent = dateLabel;
+        }
+
+        if (currentTimeNode) {
+            currentTimeNode.textContent = formatServerTime(serverDate);
+        }
+    };
+
+    const toastIcons = {
+        success: 'check_circle',
+        info: 'info',
+        warning: 'warning',
+        danger: 'error',
+    };
+
+    const showToast = ({ type = 'info', title, message, duration = 3000 }) => {
+        if (!toastStack || !title) {
+            return;
+        }
+
+        const toastId = `lumina-toast-${toastSequence += 1}`;
+        const toast = document.createElement('article');
+        toast.className = 'lumina-toast';
+        toast.dataset.type = type;
+        toast.id = toastId;
+        toast.innerHTML = `
+            <span class="material-symbols-outlined" aria-hidden="true">${toastIcons[type] || toastIcons.info}</span>
+            <div>
+                <strong>${escapeHtml(title)}</strong>
+                ${message ? `<span>${escapeHtml(message)}</span>` : ''}
+            </div>
+            <button type="button" aria-label="Tutup notifikasi">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
+        `;
+
+        const closeToast = () => {
+            if (!toast.isConnected || toast.classList.contains('is-leaving')) {
+                return;
+            }
+
+            toast.classList.add('is-leaving');
+            window.setTimeout(() => toast.remove(), 180);
+        };
+
+        toast.querySelector('button')?.addEventListener('click', closeToast);
+        toastStack.prepend(toast);
+
+        window.setTimeout(closeToast, duration);
+
+        [...toastStack.children].slice(4).forEach((item) => item.remove());
+    };
 
     const productFromCard = (card) => ({
         id: card.dataset.id,
@@ -62,7 +214,7 @@ const setupLuminaPos = () => {
         image: card.dataset.image,
     });
 
-    const addProduct = (product, qty = 1) => {
+    const addProduct = (product, qty = 1, options = {}) => {
         const existing = cart.find((item) => item.id === product.id);
 
         if (existing) {
@@ -72,6 +224,15 @@ const setupLuminaPos = () => {
         }
 
         renderCart();
+
+        if (options.notify) {
+            showToast({
+                type: 'success',
+                title: 'Produk ditambahkan',
+                message: `${product.name} masuk ke keranjang.`,
+                duration: 2200,
+            });
+        }
     };
 
     const getFlyTargetRect = () => {
@@ -152,6 +313,233 @@ const setupLuminaPos = () => {
         root.classList.toggle('is-history-open', isOpen);
     };
 
+    const setCheckoutOpen = (isOpen) => {
+        if (isOpen && !cart.length) {
+            return;
+        }
+
+        root.classList.toggle('is-checkout-open', isOpen);
+
+        if (isOpen) {
+            checkoutCompleted = false;
+            renderCheckoutPreview();
+            updateCheckoutActions();
+        } else if (checkoutSuccess) {
+            checkoutSuccess.hidden = true;
+        }
+
+        if (!isOpen) {
+            checkoutCompleted = false;
+            cashReceived = 0;
+
+            if (cashReceivedInput) {
+                cashReceivedInput.value = '';
+            }
+
+            updateCheckoutActions();
+        }
+    };
+
+    const setNoteOpen = (isOpen, itemId = null) => {
+        activeNoteItemId = isOpen ? itemId : null;
+        root.classList.toggle('is-note-open', isOpen);
+
+        if (!isOpen) {
+            return;
+        }
+
+        const item = cart.find((entry) => entry.id === itemId);
+
+        if (noteItemName) {
+            noteItemName.textContent = item?.name || 'Item keranjang';
+        }
+
+        if (noteInput) {
+            noteInput.value = item?.note || '';
+            window.setTimeout(() => noteInput.focus(), 80);
+        }
+    };
+
+    const saveItemNote = (note) => {
+        if (!activeNoteItemId) {
+            return;
+        }
+
+        const cleanedNote = note.trim();
+        const item = cart.find((entry) => entry.id === activeNoteItemId);
+
+        cart = cart.map((entry) => (
+            entry.id === activeNoteItemId
+                ? { ...entry, note: cleanedNote }
+                : entry
+        ));
+
+        renderCart();
+        setNoteOpen(false);
+        showToast({
+            type: cleanedNote ? 'success' : 'info',
+            title: cleanedNote ? 'Catatan disimpan' : 'Catatan dihapus',
+            message: item?.name,
+            duration: 2200,
+        });
+    };
+
+    const updateCheckoutActions = () => {
+        const cashIsInsufficient = selectedPayment === 'cash'
+            && root.classList.contains('is-checkout-open')
+            && !checkoutCompleted
+            && cashReceived < lastSummary.total;
+
+        if (checkoutSecondaryButton) {
+            checkoutSecondaryButton.textContent = checkoutCompleted ? 'Lihat Riwayat' : 'Batal';
+        }
+
+        if (checkoutPrimaryButton) {
+            checkoutPrimaryButton.textContent = checkoutCompleted ? 'Pesanan Baru' : 'Selesaikan Pesanan';
+            checkoutPrimaryButton.disabled = !checkoutCompleted && (!cart.length || cashIsInsufficient);
+        }
+    };
+
+    const tableLabel = (value) => `Meja ${String(value).padStart(2, '0')}`;
+
+    const setTableDropdownOpen = (isOpen) => {
+        if (orderType === 'take-away') {
+            isOpen = false;
+        }
+
+        tableField?.classList.toggle('is-table-open', isOpen);
+        tableTrigger?.setAttribute('aria-expanded', String(isOpen));
+    };
+
+    const setSelectedTable = (value) => {
+        selectedTable = String(value);
+
+        if (orderType === 'dine-in' && tableCurrent) {
+            tableCurrent.textContent = tableLabel(selectedTable);
+        }
+
+        tableOptionButtons.forEach((button) => {
+            button.setAttribute('aria-selected', String(button.dataset.tableValue === selectedTable));
+        });
+    };
+
+    const getPromoName = (button) => button?.querySelector('strong')?.textContent?.trim() || 'Tanpa Promo';
+
+    const getPaymentName = (button) => button?.querySelector('strong')?.textContent?.trim() || 'QRIS';
+
+    const getActivePromoName = () => {
+        const activeButton = promoOptionButtons.find((button) => button.dataset.promoId === selectedPromo);
+
+        return selectedPromo === 'none' ? 'Tanpa Promo' : getPromoName(activeButton);
+    };
+
+    const getActivePaymentName = () => {
+        const activeButton = paymentOptionButtons.find((button) => button.dataset.paymentId === selectedPayment);
+
+        return getPaymentName(activeButton);
+    };
+
+    const setPromoOpen = (isOpen) => {
+        promoPicker?.classList.toggle('is-choice-open', isOpen);
+        promoTrigger?.setAttribute('aria-expanded', String(isOpen));
+    };
+
+    const setPaymentOpen = (isOpen) => {
+        paymentPicker?.classList.toggle('is-choice-open', isOpen);
+        paymentTrigger?.setAttribute('aria-expanded', String(isOpen));
+    };
+
+    const setSelectedPromo = (promoId) => {
+        selectedPromo = promoId;
+        const activeButton = promoOptionButtons.find((button) => button.dataset.promoId === selectedPromo);
+
+        promoOptionButtons.forEach((button) => {
+            button.setAttribute('aria-selected', String(button === activeButton));
+        });
+
+        if (promoLabel) {
+            promoLabel.textContent = selectedPromo === 'none' ? 'Pilih Promo' : getPromoName(activeButton);
+        }
+
+        renderCart();
+        showToast({
+            type: selectedPromo === 'none' ? 'info' : 'success',
+            title: selectedPromo === 'none' ? 'Promo dilepas' : 'Promo diterapkan',
+            message: getActivePromoName(),
+            duration: 2400,
+        });
+
+        if (root.classList.contains('is-checkout-open')) {
+            renderCheckoutPreview();
+        }
+    };
+
+    const setSelectedPayment = (paymentId) => {
+        selectedPayment = paymentId;
+        const activeButton = paymentOptionButtons.find((button) => button.dataset.paymentId === selectedPayment);
+
+        paymentOptionButtons.forEach((button) => {
+            button.setAttribute('aria-selected', String(button === activeButton));
+        });
+
+        if (paymentLabel) {
+            paymentLabel.textContent = getPaymentName(activeButton);
+        }
+
+        if (selectedPayment !== 'cash') {
+            cashReceived = 0;
+
+            if (cashReceivedInput) {
+                cashReceivedInput.value = '';
+            }
+        }
+
+        showToast({
+            type: 'info',
+            title: 'Metode pembayaran dipilih',
+            message: getActivePaymentName(),
+            duration: 2200,
+        });
+
+        if (root.classList.contains('is-checkout-open')) {
+            renderCheckoutPreview();
+        }
+    };
+
+    const calculateDiscount = (subtotal) => {
+        if (subtotal <= 0) {
+            return 0;
+        }
+
+        const activePromo = promoOptionButtons.find((button) => button.dataset.promoId === selectedPromo);
+        const promoType = activePromo?.dataset.promoType || 'fixed';
+        const promoValue = Number(activePromo?.dataset.promoValue || root.dataset.discount || 0);
+
+        if (promoType === 'percent') {
+            return Math.round(subtotal * (promoValue / 100));
+        }
+
+        if (promoType === 'fixed') {
+            return Math.min(subtotal, promoValue);
+        }
+
+        return 0;
+    };
+
+    const getCartSummary = () => {
+        const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const tax = subtotal * taxRate;
+        const discount = calculateDiscount(subtotal);
+
+        return {
+            subtotal,
+            tax,
+            discount,
+            total: Math.max(0, subtotal + tax - discount),
+            itemCount: cart.reduce((sum, item) => sum + item.qty, 0),
+        };
+    };
+
     const setOrderType = (type) => {
         orderType = type;
         const isTakeAway = orderType === 'take-away';
@@ -162,13 +550,16 @@ const setupLuminaPos = () => {
 
         tableField?.classList.toggle('is-take-away', isTakeAway);
 
-        if (tableSelect) {
-            tableSelect.disabled = isTakeAway;
-            tableSelect.setAttribute('aria-disabled', String(isTakeAway));
-            tableSelect.options[tableSelect.selectedIndex].textContent = isTakeAway
-                ? 'Take Away'
-                : `Meja ${String(tableSelect.value).padStart(2, '0')}`;
+        if (tableTrigger) {
+            tableTrigger.disabled = isTakeAway;
+            tableTrigger.setAttribute('aria-disabled', String(isTakeAway));
         }
+
+        if (tableCurrent) {
+            tableCurrent.textContent = isTakeAway ? 'Take Away' : tableLabel(selectedTable);
+        }
+
+        setTableDropdownOpen(false);
     };
 
     const renderCart = () => {
@@ -188,10 +579,11 @@ const setupLuminaPos = () => {
                             <div>
                                 <h4>${item.name}</h4>
                                 <div class="lumina-cart-price">${formatCurrency(item.price)}</div>
-                                <button class="lumina-note" type="button">
+                                <button class="lumina-note" type="button" data-cart-note="${item.id}">
                                     <span class="material-symbols-outlined">edit</span>
-                                    <span>Catatan</span>
+                                    <span>${item.note ? 'Edit Catatan' : 'Catatan'}</span>
                                 </button>
+                                ${item.note ? `<p class="lumina-note-preview">${escapeHtml(item.note)}</p>` : ''}
                             </div>
                             <div class="lumina-qty">
                                 <button type="button" data-cart-decrease="${item.id}" aria-label="Kurangi ${item.name}">
@@ -208,25 +600,186 @@ const setupLuminaPos = () => {
                 .join('');
         }
 
-        const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-        const tax = subtotal * taxRate;
-        const appliedDiscount = subtotal > 0 ? discount : 0;
-        const total = Math.max(0, subtotal + tax - appliedDiscount);
-        const itemCount = cart.reduce((sum, item) => sum + item.qty, 0);
+        lastSummary = getCartSummary();
 
-        subtotalNode.textContent = formatCurrency(subtotal);
-        taxNode.textContent = formatCurrency(tax);
-        discountNode.textContent = `-${formatCurrency(appliedDiscount)}`;
-        totalNode.textContent = formatCurrency(total);
+        subtotalNode.textContent = formatCurrency(lastSummary.subtotal);
+        taxNode.textContent = formatCurrency(lastSummary.tax);
+        discountNode.textContent = `-${formatCurrency(lastSummary.discount)}`;
+        totalNode.textContent = formatCurrency(lastSummary.total);
 
         if (cartBadge) {
-            cartBadge.textContent = itemCount;
-            cartBadge.hidden = itemCount === 0;
+            cartBadge.textContent = lastSummary.itemCount;
+            cartBadge.hidden = lastSummary.itemCount === 0;
         }
 
         if (mobileCartCount) {
-            mobileCartCount.textContent = `${itemCount} item`;
+            mobileCartCount.textContent = `${lastSummary.itemCount} item`;
         }
+
+        if (checkoutOpenButton) {
+            checkoutOpenButton.disabled = cart.length === 0;
+        }
+
+        updateCheckoutActions();
+    };
+
+    const renderCheckoutPreview = () => {
+        const summary = getCartSummary();
+
+        if (checkoutOrderType) {
+            checkoutOrderType.textContent = orderType === 'take-away' ? 'Take Away' : 'Dine In';
+        }
+
+        if (checkoutTable) {
+            checkoutTable.textContent = orderType === 'take-away' ? '-' : tableLabel(selectedTable);
+        }
+
+        if (checkoutPayment) {
+            checkoutPayment.textContent = getActivePaymentName();
+        }
+
+        if (checkoutPromo) {
+            checkoutPromo.textContent = getActivePromoName();
+        }
+
+        if (checkoutItems) {
+            checkoutItems.innerHTML = cart.map((item) => `
+                <article class="lumina-checkout-item">
+                    <img src="${item.image}" alt="${escapeHtml(item.name)}">
+                    <div>
+                        <strong>${escapeHtml(item.name)}</strong>
+                        <span>${item.qty} x ${formatCurrency(item.price)}</span>
+                        ${item.note ? `<small>${escapeHtml(item.note)}</small>` : ''}
+                    </div>
+                    <strong>${formatCurrency(item.price * item.qty)}</strong>
+                </article>
+            `).join('');
+        }
+
+        checkoutSubtotal.textContent = formatCurrency(summary.subtotal);
+        checkoutTax.textContent = formatCurrency(summary.tax);
+        checkoutDiscount.textContent = `-${formatCurrency(summary.discount)}`;
+        checkoutTotal.textContent = formatCurrency(summary.total);
+
+        const isCash = selectedPayment === 'cash';
+        if (cashPanel) {
+            cashPanel.hidden = !isCash;
+        }
+
+        if (isCash && cashChangeNode) {
+            const change = Math.max(0, cashReceived - summary.total);
+            cashChangeNode.textContent = formatCurrency(change);
+        }
+
+        updateCheckoutActions();
+    };
+
+    const updateHistoryStats = (transactionTotal) => {
+        historyStats = {
+            transactions: historyStats.transactions + 1,
+            revenue: historyStats.revenue + transactionTotal,
+        };
+
+        const average = historyStats.transactions > 0
+            ? Math.round(historyStats.revenue / historyStats.transactions)
+            : 0;
+
+        historyTransactionsNode.textContent = historyStats.transactions;
+        historyRevenueNode.textContent = formatCurrency(historyStats.revenue);
+        historyAverageNode.textContent = formatCurrency(average);
+    };
+
+    const addTransactionToHistory = (summary) => {
+        const code = `TRX-${transactionSequence}`;
+        transactionSequence += 1;
+
+        const time = new Intl.DateTimeFormat('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: 'Asia/Jakarta',
+        }).format(new Date()).replace('.', ':');
+
+        historyList?.insertAdjacentHTML('afterbegin', `
+            <article class="lumina-history-item">
+                <div>
+                    <strong>${code}</strong>
+                    <span>${time} ${escapeHtml(serverTimeZoneLabel)} - Yopi</span>
+                </div>
+                <div>
+                    <span>${escapeHtml(getActivePaymentName())}</span>
+                    <strong>${formatCurrency(summary.total)}</strong>
+                </div>
+            </article>
+        `);
+
+        updateHistoryStats(summary.total);
+
+        return code;
+    };
+
+    const completeCheckout = () => {
+        if (!cart.length) {
+            return;
+        }
+
+        const completedSummary = getCartSummary();
+
+        if (selectedPayment === 'cash' && cashReceived < completedSummary.total) {
+            showToast({
+                type: 'warning',
+                title: 'Uang diterima belum cukup',
+                message: `Kurang ${formatCurrency(completedSummary.total - cashReceived)}.`,
+                duration: 2800,
+            });
+            cashReceivedInput?.focus();
+            return;
+        }
+
+        lastTransactionCode = addTransactionToHistory(completedSummary);
+        cart = [];
+        renderCart();
+        setCartOpen(false);
+        checkoutCompleted = true;
+
+        if (checkoutSuccess) {
+            checkoutSuccess.hidden = false;
+        }
+
+        if (checkoutSuccessCode) {
+            checkoutSuccessCode.textContent = lastTransactionCode;
+        }
+
+        showToast({
+            type: 'success',
+            title: 'Pesanan berhasil dibuat',
+            message: `${lastTransactionCode} masuk ke Riwayat Hari Ini.`,
+            duration: 3200,
+        });
+
+        updateCheckoutActions();
+    };
+
+    const handleCheckoutPrimary = () => {
+        if (checkoutCompleted) {
+            setCheckoutOpen(false);
+            setCartOpen(false);
+            return;
+        }
+
+        completeCheckout();
+    };
+
+    const handleCheckoutSecondary = () => {
+        if (checkoutCompleted) {
+            setCheckoutOpen(false);
+            setCartOpen(false);
+            setMenuOpen(false);
+            setHistoryOpen(true);
+            return;
+        }
+
+        setCheckoutOpen(false);
     };
 
     const filterProducts = () => {
@@ -248,7 +801,9 @@ const setupLuminaPos = () => {
 
     const hasOpenPanel = () => root.classList.contains('is-cart-open')
         || root.classList.contains('is-menu-open')
-        || root.classList.contains('is-history-open');
+        || root.classList.contains('is-history-open')
+        || root.classList.contains('is-checkout-open')
+        || root.classList.contains('is-note-open');
 
     productCards.forEach((card) => {
         const addFromCard = (event) => {
@@ -259,7 +814,7 @@ const setupLuminaPos = () => {
             }
 
             animateProductToCart(card);
-            addProduct(productFromCard(card));
+            addProduct(productFromCard(card), 1, { notify: true });
         };
 
         card.addEventListener('click', addFromCard);
@@ -310,14 +865,82 @@ const setupLuminaPos = () => {
         button.addEventListener('click', () => setHistoryOpen(false));
     });
 
+    checkoutOpenButton?.addEventListener('click', () => {
+        setPromoOpen(false);
+        setPaymentOpen(false);
+        setTableDropdownOpen(false);
+        setCheckoutOpen(true);
+    });
+
+    checkoutCloseButtons.forEach((button) => {
+        button.addEventListener('click', () => setCheckoutOpen(false));
+    });
+
+    checkoutPrimaryButton?.addEventListener('click', handleCheckoutPrimary);
+    checkoutSecondaryButton?.addEventListener('click', handleCheckoutSecondary);
+
+    noteCloseButtons.forEach((button) => {
+        button.addEventListener('click', () => setNoteOpen(false));
+    });
+
+    noteSuggestionButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            if (!noteInput) {
+                return;
+            }
+
+            const suggestion = button.dataset.noteSuggestion;
+            const currentValue = noteInput.value.trim();
+            noteInput.value = currentValue ? `${currentValue}, ${suggestion}` : suggestion;
+            noteInput.focus();
+        });
+    });
+
+    noteClearButton?.addEventListener('click', () => saveItemNote(''));
+    noteSaveButton?.addEventListener('click', () => saveItemNote(noteInput?.value || ''));
+
+    cashReceivedInput?.addEventListener('input', () => {
+        cashReceived = Number(cashReceivedInput.value || 0);
+        renderCheckoutPreview();
+    });
+
     orderTypeButtons.forEach((button) => {
         button.addEventListener('click', () => setOrderType(button.dataset.orderType));
     });
 
-    tableSelect?.addEventListener('change', () => {
-        if (orderType === 'dine-in') {
-            tableSelect.options[tableSelect.selectedIndex].textContent = `Meja ${String(tableSelect.value).padStart(2, '0')}`;
-        }
+    tableTrigger?.addEventListener('click', () => {
+        setTableDropdownOpen(!tableField?.classList.contains('is-table-open'));
+    });
+
+    tableOptionButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setSelectedTable(button.dataset.tableValue);
+            setTableDropdownOpen(false);
+        });
+    });
+
+    promoTrigger?.addEventListener('click', () => {
+        setPaymentOpen(false);
+        setPromoOpen(!promoPicker?.classList.contains('is-choice-open'));
+    });
+
+    promoOptionButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setSelectedPromo(button.dataset.promoId);
+            setPromoOpen(false);
+        });
+    });
+
+    paymentTrigger?.addEventListener('click', () => {
+        setPromoOpen(false);
+        setPaymentOpen(!paymentPicker?.classList.contains('is-choice-open'));
+    });
+
+    paymentOptionButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setSelectedPayment(button.dataset.paymentId);
+            setPaymentOpen(false);
+        });
     });
 
     document.addEventListener('keydown', (event) => {
@@ -325,6 +948,11 @@ const setupLuminaPos = () => {
             setCartOpen(false);
             setMenuOpen(false);
             setHistoryOpen(false);
+            setCheckoutOpen(false);
+            setNoteOpen(false);
+            setTableDropdownOpen(false);
+            setPromoOpen(false);
+            setPaymentOpen(false);
         }
     });
 
@@ -335,8 +963,22 @@ const setupLuminaPos = () => {
             event.target.closest('[data-cart-open]')
             || event.target.closest('[data-menu-open]')
             || event.target.closest('[data-history-open]')
+            || event.target.closest('[data-checkout-open]')
+            || event.target.closest('[data-cart-note]')
         ) {
             return;
+        }
+
+        if (tableField?.classList.contains('is-table-open') && !tableField.contains(event.target)) {
+            setTableDropdownOpen(false);
+        }
+
+        if (promoPicker?.classList.contains('is-choice-open') && !promoPicker.contains(event.target)) {
+            setPromoOpen(false);
+        }
+
+        if (paymentPicker?.classList.contains('is-choice-open') && !paymentPicker.contains(event.target)) {
+            setPaymentOpen(false);
         }
 
         if (root.classList.contains('is-cart-open')) {
@@ -366,6 +1008,24 @@ const setupLuminaPos = () => {
             closedPanel = true;
         }
 
+        if (root.classList.contains('is-checkout-open')) {
+            if (checkoutModal?.contains(event.target)) {
+                return;
+            }
+
+            setCheckoutOpen(false);
+            closedPanel = true;
+        }
+
+        if (root.classList.contains('is-note-open')) {
+            if (noteModal?.contains(event.target)) {
+                return;
+            }
+
+            setNoteOpen(false);
+            closedPanel = true;
+        }
+
         if (closedPanel) {
             suppressProductClick = true;
             window.setTimeout(() => {
@@ -379,6 +1039,7 @@ const setupLuminaPos = () => {
     cartList.addEventListener('click', (event) => {
         const increase = event.target.closest('[data-cart-increase]');
         const decrease = event.target.closest('[data-cart-decrease]');
+        const note = event.target.closest('[data-cart-note]');
 
         if (increase) {
             changeQty(increase.dataset.cartIncrease, 1);
@@ -386,6 +1047,10 @@ const setupLuminaPos = () => {
 
         if (decrease) {
             changeQty(decrease.dataset.cartDecrease, -1);
+        }
+
+        if (note) {
+            setNoteOpen(true, note.dataset.cartNote);
         }
     });
 
@@ -402,6 +1067,8 @@ const setupLuminaPos = () => {
     }
 
     setOrderType(orderType);
+    updateServerClock();
+    window.setInterval(updateServerClock, 1000);
 };
 
 document.addEventListener('DOMContentLoaded', setupLuminaPos);

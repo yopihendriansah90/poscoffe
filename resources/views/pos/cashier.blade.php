@@ -103,6 +103,18 @@
             ['code' => 'TRX-1020', 'time' => '11:59', 'cashier' => 'Yopi', 'method' => 'QRIS', 'total' => 211000],
         ],
     ];
+
+    $posTimezone = config('app.timezone', 'Asia/Jakarta');
+    $serverNow = now($posTimezone);
+    $timezoneLabels = [
+        'Asia/Jakarta' => 'WIB',
+        'Asia/Makassar' => 'WITA',
+        'Asia/Jayapura' => 'WIT',
+    ];
+    $posTimezoneLabel = $timezoneLabels[$posTimezone] ?? $posTimezone;
+    $dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    $monthNames = [1 => 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    $serverDateLabel = $dayNames[(int) $serverNow->format('w')] . ', ' . $serverNow->format('d') . ' ' . $monthNames[(int) $serverNow->format('n')] . ' ' . $serverNow->format('Y');
 @endphp
 
 <!DOCTYPE html>
@@ -125,7 +137,12 @@
             data-initial-cart='@json($initialCart)'
             data-discount="10000"
             data-tax-rate="0.1"
+            data-server-now-ms="{{ $serverNow->getTimestamp() * 1000 }}"
+            data-server-timezone="{{ $posTimezone }}"
+            data-server-timezone-label="{{ $posTimezoneLabel }}"
         >
+            <div class="lumina-toast-stack" data-toast-stack aria-live="polite" aria-atomic="false"></div>
+
             <section class="lumina-main" aria-label="Terminal kasir">
                 <header class="lumina-topbar">
                     <div class="lumina-brand">
@@ -138,10 +155,10 @@
                     <div class="lumina-toolbar">
                         <div class="lumina-date-pill" aria-label="Tanggal dan waktu kasir">
                             <span class="material-symbols-outlined">calendar_today</span>
-                            <span>Rab, 29 Mei 2024</span>
+                            <span data-current-date>{{ $serverDateLabel }}</span>
                             <span class="divider" aria-hidden="true"></span>
                             <span class="material-symbols-outlined">schedule</span>
-                            <span>07:59 WIB</span>
+                            <span data-current-time>{{ $serverNow->format('H:i:s') }} {{ $posTimezoneLabel }}</span>
                         </div>
 
                         <div class="lumina-status-pill">
@@ -211,6 +228,8 @@
             <button class="lumina-cart-overlay" type="button" data-cart-close aria-label="Tutup keranjang"></button>
             <button class="lumina-menu-overlay" type="button" data-menu-close aria-label="Tutup menu kasir"></button>
             <button class="lumina-history-overlay" type="button" data-history-close aria-label="Tutup riwayat hari ini"></button>
+            <button class="lumina-checkout-overlay" type="button" data-checkout-close aria-label="Tutup konfirmasi pesanan"></button>
+            <button class="lumina-note-overlay" type="button" data-note-close aria-label="Tutup catatan item"></button>
 
             <aside class="lumina-menu-panel" aria-label="Menu operasional kasir">
                 <div class="lumina-menu-header">
@@ -242,7 +261,7 @@
                 <div class="lumina-history-header">
                     <div>
                         <strong>Riwayat Hari Ini</strong>
-                        <span>Rab, 29 Mei 2024</span>
+                        <span data-history-date>{{ $serverDateLabel }}</span>
                     </div>
                     <button class="lumina-icon-button" type="button" data-history-close aria-label="Tutup riwayat">
                         <span class="material-symbols-outlined">close</span>
@@ -252,15 +271,15 @@
                 <div class="lumina-history-stats">
                     <div>
                         <span>Transaksi</span>
-                        <strong>{{ $todaySummary['transactions'] }}</strong>
+                        <strong data-history-transactions>{{ $todaySummary['transactions'] }}</strong>
                     </div>
                     <div>
                         <span>Omzet</span>
-                        <strong>Rp {{ number_format($todaySummary['revenue'], 0, ',', '.') }}</strong>
+                        <strong data-history-revenue>Rp {{ number_format($todaySummary['revenue'], 0, ',', '.') }}</strong>
                     </div>
                     <div>
                         <span>Rata-rata</span>
-                        <strong>Rp {{ number_format($todaySummary['average'], 0, ',', '.') }}</strong>
+                        <strong data-history-average>Rp {{ number_format($todaySummary['average'], 0, ',', '.') }}</strong>
                     </div>
                     <div>
                         <span>Order Terbuka</span>
@@ -268,7 +287,7 @@
                     </div>
                 </div>
 
-                <div class="lumina-history-list">
+                <div class="lumina-history-list" data-history-list>
                     @foreach ($todaySummary['items'] as $transaction)
                         <article class="lumina-history-item">
                             <div>
@@ -300,14 +319,20 @@
                         <button class="is-active" type="button" data-order-type="dine-in">Dine In</button>
                         <button type="button" data-order-type="take-away">Take Away</button>
                     </div>
-                    <label class="lumina-table-select" data-table-field>
-                        <select data-table-select aria-label="Pilih meja">
+                    <div class="lumina-table-select" data-table-field>
+                        <button class="lumina-table-trigger" type="button" data-table-trigger aria-haspopup="listbox" aria-expanded="false">
+                            <span data-table-current>Meja 05</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                        </button>
+                        <div class="lumina-table-options" data-table-options role="listbox" aria-label="Pilih meja">
                             @for ($table = 1; $table <= 5; $table++)
-                                <option value="{{ $table }}" @selected($table === 5)>Meja {{ str_pad((string) $table, 2, '0', STR_PAD_LEFT) }}</option>
+                                <button type="button" role="option" data-table-option data-table-value="{{ $table }}" aria-selected="{{ $table === 5 ? 'true' : 'false' }}">
+                                    <span>Meja {{ str_pad((string) $table, 2, '0', STR_PAD_LEFT) }}</span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                                </button>
                             @endfor
-                        </select>
-                        <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-                    </label>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="lumina-cart" data-cart-list></div>
@@ -330,15 +355,136 @@
                         <span data-total>Rp 0</span>
                     </div>
                     <div class="lumina-payment-row">
-                        <button class="lumina-soft-button" type="button">
-                            <span>Promo Applied</span>
-                            <span class="material-symbols-outlined">check_circle</span>
-                        </button>
-                        <button class="lumina-outline-button" type="button">QRIS</button>
+                        <div class="lumina-choice" data-promo-picker>
+                            <button class="lumina-soft-button lumina-choice-trigger" type="button" data-promo-trigger aria-haspopup="listbox" aria-expanded="false">
+                                <span data-promo-label>Member - Rp10rb</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                            </button>
+                            <div class="lumina-choice-options" data-promo-options role="listbox" aria-label="Pilih promo">
+                                <button type="button" role="option" data-promo-option data-promo-id="member" data-promo-type="fixed" data-promo-value="10000" aria-selected="true">
+                                    <span><strong>Member</strong><small>Potongan Rp10.000</small></span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                                </button>
+                                <button type="button" role="option" data-promo-option data-promo-id="happy-hour" data-promo-type="percent" data-promo-value="10" aria-selected="false">
+                                    <span><strong>Happy Hour</strong><small>Diskon 10%</small></span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                                </button>
+                                <button type="button" role="option" data-promo-option data-promo-id="none" data-promo-type="none" data-promo-value="0" aria-selected="false">
+                                    <span><strong>Tanpa Promo</strong><small>Diskon tidak digunakan</small></span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="lumina-choice" data-payment-picker>
+                            <button class="lumina-outline-button lumina-choice-trigger" type="button" data-payment-trigger aria-haspopup="listbox" aria-expanded="false">
+                                <span data-payment-label>QRIS</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                            </button>
+                            <div class="lumina-choice-options" data-payment-options role="listbox" aria-label="Pilih metode pembayaran">
+                                <button type="button" role="option" data-payment-option data-payment-id="qris" aria-selected="true">
+                                    <span><strong>QRIS</strong><small>Scan kode pembayaran</small></span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                                </button>
+                                <button type="button" role="option" data-payment-option data-payment-id="cash" aria-selected="false">
+                                    <span><strong>Tunai</strong><small>Pembayaran cash</small></span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                                </button>
+                                <button type="button" role="option" data-payment-option data-payment-id="card" aria-selected="false">
+                                    <span><strong>Kartu</strong><small>Debit atau kredit</small></span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <button class="lumina-primary-button" type="button">Buat Pesanan</button>
+                    <button class="lumina-primary-button" type="button" data-checkout-open>Buat Pesanan</button>
                 </div>
             </aside>
+
+            <section class="lumina-checkout-modal" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
+                <div class="lumina-checkout-header">
+                    <div>
+                        <strong id="checkout-title">Konfirmasi Pesanan</strong>
+                        <span>Periksa ringkasan sebelum transaksi dibuat.</span>
+                    </div>
+                    <button class="lumina-icon-button" type="button" data-checkout-close aria-label="Tutup konfirmasi">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="lumina-checkout-body">
+                    <div class="lumina-checkout-meta">
+                        <div>
+                            <span>Jenis</span>
+                            <strong data-checkout-order-type>Dine In</strong>
+                        </div>
+                        <div>
+                            <span>Meja</span>
+                            <strong data-checkout-table>Meja 05</strong>
+                        </div>
+                        <div>
+                            <span>Pembayaran</span>
+                            <strong data-checkout-payment>QRIS</strong>
+                        </div>
+                        <div>
+                            <span>Promo</span>
+                            <strong data-checkout-promo>Member</strong>
+                        </div>
+                    </div>
+                    <div class="lumina-checkout-items" data-checkout-items></div>
+                    <div class="lumina-checkout-totals">
+                        <div><span>Subtotal</span><strong data-checkout-subtotal>Rp 0</strong></div>
+                        <div><span>Pajak</span><strong data-checkout-tax>Rp 0</strong></div>
+                        <div class="is-discount"><span>Diskon</span><strong data-checkout-discount>-Rp 0</strong></div>
+                        <div class="is-total"><span>Total</span><strong data-checkout-total>Rp 0</strong></div>
+                    </div>
+                    <div class="lumina-cash-panel" data-cash-panel hidden>
+                        <label for="cash-received">Uang diterima</label>
+                        <div class="lumina-cash-input">
+                            <span>Rp</span>
+                            <input id="cash-received" type="number" min="0" step="1000" inputmode="numeric" placeholder="0" data-cash-received>
+                        </div>
+                        <div class="lumina-cash-change">
+                            <span>Kembalian</span>
+                            <strong data-cash-change>Rp 0</strong>
+                        </div>
+                    </div>
+                    <div class="lumina-checkout-success" data-checkout-success hidden>
+                        <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                        <div>
+                            <strong>Pesanan berhasil dibuat</strong>
+                            <span><span data-checkout-success-code>TRX-1025</span> masuk ke Riwayat Hari Ini.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lumina-checkout-actions">
+                    <button class="lumina-secondary-button" type="button" data-checkout-secondary>Batal</button>
+                    <button class="lumina-primary-button" type="button" data-checkout-primary>Selesaikan Pesanan</button>
+                </div>
+            </section>
+
+            <section class="lumina-note-modal" role="dialog" aria-modal="true" aria-labelledby="note-title">
+                <div class="lumina-note-header">
+                    <div>
+                        <strong id="note-title">Catatan Item</strong>
+                        <span data-note-item-name>Pilih item</span>
+                    </div>
+                    <button class="lumina-icon-button" type="button" data-note-close aria-label="Tutup catatan">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="lumina-note-body">
+                    <textarea data-note-input rows="4" maxlength="120" placeholder="Contoh: less ice, tanpa gula, hangat, extra sauce"></textarea>
+                    <div class="lumina-note-suggestions" aria-label="Saran catatan cepat">
+                        <button type="button" data-note-suggestion="Less ice">Less ice</button>
+                        <button type="button" data-note-suggestion="Tanpa gula">Tanpa gula</button>
+                        <button type="button" data-note-suggestion="Hangat">Hangat</button>
+                        <button type="button" data-note-suggestion="Extra sauce">Extra sauce</button>
+                    </div>
+                </div>
+                <div class="lumina-note-actions">
+                    <button class="lumina-secondary-button" type="button" data-note-clear>Hapus</button>
+                    <button class="lumina-primary-button" type="button" data-note-save>Simpan Catatan</button>
+                </div>
+            </section>
 
             <nav class="lumina-mobile-nav" aria-label="Navigasi kasir mobile">
                 <button class="is-active" type="button" data-product-tab>
