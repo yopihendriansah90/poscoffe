@@ -17,6 +17,9 @@ class CategoriesTable
     {
         return $table
             ->columns([
+                TextColumn::make('row_index')
+                    ->label('No')
+                    ->rowIndex(),
                 TextColumn::make('name')
                     ->label('Kategori')
                     ->searchable()

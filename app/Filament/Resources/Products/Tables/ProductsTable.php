@@ -19,6 +19,9 @@ class ProductsTable
     {
         return $table
             ->columns([
+                TextColumn::make('row_index')
+                    ->label('No')
+                    ->rowIndex(),
                 ImageColumn::make('image_path')
                     ->label('Gambar')
                     ->getStateUsing(function ($record): ?string {
